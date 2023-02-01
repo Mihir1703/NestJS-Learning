@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { AuthObject } from './dto';
 import { LoginAuthDto } from './dto';
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { JwtService } from '@nestjs/jwt';
+import { passwordStrength } from 'check-password-strength';
 
 @Injectable({})
 export class AuthService {
@@ -27,6 +28,10 @@ export class AuthService {
         return { success: true, token: token.access_token };
     }
     async signup(body: AuthObject): Promise<object> {
+        const strength = passwordStrength(body.password);
+        if (strength.id < 3) {
+            throw new ForbiddenException('Password is too weak');
+        }
         const hash = await argon.hash(body.password);
         try {
             const user = await this.prisma.user.create({
@@ -47,10 +52,7 @@ export class AuthService {
             }
         }
     }
-    async signToken(
-        userId: number,
-        email: string,
-    ): Promise<{ access_token: string }> {
+    async signToken(userId: number, email: string): Promise<{ access_token: string }> {
         const token = await this.jwt.signAsync(
             { userId, email },
             {

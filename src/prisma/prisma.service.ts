@@ -5,12 +5,14 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient {
     constructor() {
         super({
-            log: ['query', 'info', 'warn', 'error'],
             datasources: {
                 db: {
                     url: process.env.DATABASE_URL,
                 },
             },
         });
+    }
+    cleanDB() {
+        return this.$transaction([this.notes.deleteMany(), this.user.deleteMany()]);
     }
 }
